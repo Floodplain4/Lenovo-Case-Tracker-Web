@@ -88,6 +88,55 @@
             grid-template-columns: 88px minmax(0, 1fr) 34px;
         }
     }
+
+.oldest-case-row td:first-child {
+    border-left: 4px solid transparent;
+}
+
+.oldest-case-row.status-ordered td:first-child {
+    border-left-color: #3b82f6;
+}
+
+.oldest-case-row.status-pending td:first-child {
+    border-left-color: #fbbf24;
+}
+
+.oldest-case-row.status-replaced td:first-child {
+    border-left-color: #10b981;
+}
+
+.oldest-case-row.status-returned td:first-child {
+    border-left-color: #ef4444;
+}
+
+.oldest-case-row.status-complete td:first-child {
+    border-left-color: #94a3b8;
+}
+
+.oldest-case-row.status-ordered td:nth-child(3) {
+    color: #3b82f6;
+    font-weight: 600;
+}
+
+.oldest-case-row.status-pending td:nth-child(3) {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
+.oldest-case-row.status-replaced td:nth-child(3) {
+    color: #34d399;
+    font-weight: 600;
+}
+
+.oldest-case-row.status-returned td:nth-child(3) {
+    color: #f87171;
+    font-weight: 600;
+}
+
+.oldest-case-row.status-complete td:nth-child(3) {
+    color: #94a3b8;
+    font-weight: 600;
+}    
 </style>
 
 {% if warning_default_secret and not user.username == "localadmin" %}<div class="warning">Development secret key is still in use. Set LCT_SECRET_KEY before deployment.</div>{% endif %}
@@ -163,7 +212,7 @@
             </thead>
             <tbody>
                 {% for case in oldest_open %}
-                <tr>
+                <tr class="oldest-case-row status-{{ case.status|lower|replace(' ', '-') }}">
                     <td>{{ case.work_order }}</td>
                     <td>{{ case.serial_number }}</td>
                     <td>{{ case.status }}</td>
