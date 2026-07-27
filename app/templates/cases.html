@@ -41,6 +41,17 @@
   .status-form select { min-width:112px; height:32px; padding:.2rem .45rem; font-size:.85rem; }
   .serial-cell, .work-order-cell { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; font-weight:700; white-space:nowrap; }
   .serial-value { display:inline-flex; align-items:center; gap:5px; }
+  .serial-history-link {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .serial-history-link:hover,
+  .serial-history-link:focus-visible {
+    color: #60a5fa;
+    text-decoration: underline;
+  }
   .serial-copy-button { padding:3px 7px; margin:0; font-size:.72rem; background:#374151; border-color:#6b7280; }
   .parts-cell, .timestamp-cell { white-space:nowrap; }
   .notes-cell { max-width:300px; color:rgba(255,255,255,.86); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -190,11 +201,30 @@
             aria-selected="false">
           <td class="work-order-cell">{{ case.work_order }}</td>
           <td class="serial-cell">
-            <span class="serial-value">{{ case.serial_number }}
-              <button class="serial-copy-button" type="button" data-copy-serial="{{ case.serial_number }}" title="Copy serial number">Copy</button>
+            <span class="serial-value">
+              <a
+                class="serial-history-link"
+                href="/history?serial={{ case.serial_number|urlencode }}"
+                title="View history for {{ case.serial_number }}">
+                {{ case.serial_number }}
+              </a>
+
+              <button
+                class="serial-copy-button"
+                type="button"
+                data-copy-serial="{{ case.serial_number }}"
+                title="Copy serial number">
+                Copy
+              </button>
             </span>
-            {% if case.serial_number in repeat_serials %}<span class="repeat-badge">Repeat</span>{% endif %}
-            {% if case.followup %}<span class="followup-badge">Follow-up</span>{% endif %}
+
+            {% if case.serial_number in repeat_serials %}
+              <span class="repeat-badge">Repeat</span>
+            {% endif %}
+
+            {% if case.followup %}
+              <span class="followup-badge">Follow-up</span>
+            {% endif %}
           </td>
           <td>
             <form class="status-form" method="post" action="/cases/{{ case.id }}/status">

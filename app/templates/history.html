@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .history-heading {
+        display:flex;
+        align-items:flex-start;
+        justify-content:space-between;
+        gap:16px;
+        flex-wrap:wrap;
+    }
+    .history-heading h2 { margin:0 0 5px; }
+    .history-search {
+        display:flex;
+        gap:8px;
+        align-items:center;
+        flex-wrap:wrap;
+        margin-top:14px;
+    }
+    .history-search input {
+        width:min(360px, 100%);
+        min-width:240px;
+        font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+        text-transform:uppercase;
+    }
+    .device-title {
+        display:flex;
+        align-items:center;
+        gap:10px;
+        flex-wrap:wrap;
+        margin-bottom:14px;
+    }
+    .device-title h2 {
+        margin:0;
+        font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+    }
+    .device-badge {
+        display:inline-flex;
+        align-items:center;
+        padding:4px 9px;
+        border-radius:999px;
+        font-size:.75rem;
+        font-weight:800;
+        background:#7c3aed;
+        color:white;
+    }
+    .history-stats {
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(145px,1fr));
+        gap:12px;
+    }
+    .history-stat {
+        min-height:76px;
+        padding:13px;
+        background:var(--panel-dark);
+        border:1px solid var(--border);
+        border-left:4px solid #3b82f6;
+        border-radius:10px;
+        display:flex;
+        flex-direction:column;
+        justify-content:center;
+        gap:5px;
+    }
+    .history-stat strong { font-size:1.1rem; overflow-wrap:anywhere; }
+    .history-stat span { color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.04em; }
+    .history-stat.repeat { border-left-color:#8b5cf6; color:var(--text); }
+    .history-stat.parts { border-left-color:#34d399; }
+    .history-stat.open { border-left-color:#f59e0b; }
+    .history-layout {
+        display:grid;
+        grid-template-columns:minmax(220px,320px) minmax(0,1fr);
+        gap:16px;
+        align-items:start;
+    }
+    .parts-list { display:grid; gap:9px; }
+    .part-row {
+        display:flex;
+        justify-content:space-between;
+        gap:12px;
+        padding:10px 11px;
+        border:1px solid var(--border);
+        border-radius:8px;
+        background:var(--panel-dark);
+    }
+    .part-count {
+        min-width:28px;
+        text-align:center;
+        border-radius:999px;
+        padding:2px 7px;
+        background:#1d4ed8;
+        font-weight:800;
+    }
+    .history-table { width:100%; }
+    .history-table th { cursor:default; }
+    .history-table .serial-mono,
+    .history-table .work-order {
+        font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+        font-weight:700;
+    }
+    .status-pill {
+        display:inline-flex;
+        padding:3px 8px;
+        border-radius:999px;
+        background:#374151;
+        font-size:.76rem;
+        font-weight:750;
+    }
+    .empty-history {
+        text-align:center;
+        padding:42px 20px;
+    }
+    .empty-history h3 { margin:0 0 7px; }
+    @media (max-width:900px) {
+        .history-layout { grid-template-columns:1fr; }
+        .history-search input { min-width:0; flex:1; }
+    }
+</style>
+
+<div class="card">
+    <div class="history-heading">
+        <div>
+            <h2>Device History</h2>
+            <div class="muted">Search a serial number to review every recorded repair and part replacement.</div>
+        </div>
+    </div>
+
+    <form method="get" action="/history" class="history-search">
+        <label for="historySerial" class="muted">Serial Number</label>
+        <input
+            id="historySerial"
+            name="serial"
+            value="{{ serial }}"
+            placeholder="Enter serial number"
+            maxlength="12"
+            autocomplete="off"
+            autofocus
+            required
+        >
+        <button type="submit">Search History</button>
+        {% if serial %}<a class="button secondary" href="/history">Clear</a>{% endif %}
+    </form>
+</div>
+
+{% if device %}
+<div class="card">
+    <div class="device-title">
+        <h2>{{ device.serial_number }}</h2>
+        {% if device.is_repeat %}<span class="device-badge">Repeat Device</span>{% endif %}
+    </div>
+
+    <div class="history-stats">
+        <div class="history-stat repeat">
+            <strong>{{ device.repair_count }}</strong>
+            <span>Recorded Repairs</span>
+        </div>
+        <div class="history-stat">
+            <strong>{{ device.first_seen or 'Unknown' }}</strong>
+            <span>First Seen</span>
+        </div>
+        <div class="history-stat">
+            <strong>{{ device.last_seen or 'Unknown' }}</strong>
+            <span>Last Seen</span>
+        </div>
+        <div class="history-stat open">
+            <strong>{{ device.current_status }}</strong>
+            <span>Latest Status</span>
+        </div>
+        <div class="history-stat open">
+            <strong>{{ device.open_case_count }}</strong>
+            <span>Open Cases</span>
+        </div>
+        <div class="history-stat parts">
+            <strong>{{ device.most_replaced_part }}</strong>
+            <span>Most Recorded Part</span>
+        </div>
+    </div>
+</div>
+
+<div class="history-layout">
+    <section class="card">
+        <h3 style="margin-top:0;">Parts Breakdown</h3>
+        {% if device.parts_breakdown %}
+        <div class="parts-list">
+            {% for item in device.parts_breakdown %}
+            <div class="part-row">
+                <span>{{ item.part }}</span>
+                <span class="part-count">{{ item.count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="muted">No parts were recorded for this device.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h3 style="margin-top:0;">Repair Timeline</h3>
+        <div class="scroll-window" style="max-height:58vh;">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Work Order</th>
+                        <th>Status</th>
+                        <th>Parts</th>
+                        <th>Notes</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in device.cases %}
+                    <tr>
+                        <td style="white-space:nowrap;">{{ case.timestamp or 'Unknown' }}</td>
+                        <td class="work-order">{{ case.work_order }}</td>
+                        <td><span class="status-pill">{{ case.status }}</span></td>
+                        <td>{{ case.parts or '—' }}</td>
+                        <td title="{{ case.user_notes }}">{{ case.user_notes or '—' }}</td>
+                        <td><a class="button small-button" href="/cases/{{ case.id }}/edit">Open</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+{% elif searched %}
+<div class="card empty-history">
+    <h3>No history found for {{ serial }}</h3>
+    <p class="muted">Check the serial number and try again. The search ignores capitalization and surrounding spaces.</p>
+</div>
+{% else %}
+<div class="card empty-history">
+    <h3>Search for a device</h3>
+    <p class="muted">Its repair count, parts history, latest status, and complete case timeline will appear here.</p>
+</div>
+{% endif %}
+
+{% endblock %}

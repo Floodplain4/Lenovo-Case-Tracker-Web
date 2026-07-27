@@ -661,6 +661,28 @@ def toggle_followup(
     )
 
 
+
+@app.get("/history")
+def history_page(
+    request: Request,
+    serial: str = "",
+    user: dict = Depends(current_user),
+):
+    normalized_serial = serial.strip().upper()
+    device = db.device_history(normalized_serial) if normalized_serial else None
+
+    return template(
+        request,
+        "history.html",
+        {
+            "user": user,
+            "serial": normalized_serial,
+            "device": device,
+            "searched": bool(normalized_serial),
+        },
+    )
+
+
 @app.get("/repeats")
 def repeats(request: Request, user: dict = Depends(current_user)):
     rows = []

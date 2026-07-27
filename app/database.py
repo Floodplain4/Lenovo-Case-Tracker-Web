@@ -648,6 +648,69 @@ def repeat_serial_groups() -> dict[str, list[dict]]:
     return {serial: rows for serial, rows in groups.items() if len(rows) >= 2}
 
 
+
+def device_history(serial_number: str) -> Optional[dict]:
+    """Return a complete repair summary for one normalized serial number."""
+    initialize_database()
+    serial = serial_number.strip().upper()
+    if not serial:
+        return None
+
+    with get_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT *
+            FROM cases
+            WHERE UPPER(TRIM(serial_number)) = ?
+            ORDER BY COALESCE(timestamp, '') DESC, id DESC
+            """,
+            (serial,),
+        ).fetchall()
+
+    cases = [row_to_case(row) for row in rows]
+    if not cases:
+        return None
+
+    part_counts: dict[str, int] = {}
+    for case in cases:
+        parts, other, _notes = parse_notes_field(case.get("notes") or "")
+        for part in parts:
+            part_counts[part] = part_counts.get(part, 0) + 1
+        if other:
+            label = f"Other: {other}"
+            part_counts[label] = part_counts.get(label, 0) + 1
+
+    parts_breakdown = [
+        {"part": part, "count": count}
+        for part, count in sorted(
+            part_counts.items(),
+            key=lambda item: (-item[1], item[0].lower()),
+        )
+    ]
+
+    # Rows are already newest-first. Unknown timestamps sort to the bottom.
+    known_timestamps = [
+        case["timestamp"]
+        for case in cases
+        if case.get("timestamp") and parse_timestamp(case["timestamp"]) != datetime.max
+    ]
+
+    open_cases = [case for case in cases if case["status"] != "Complete"]
+    latest_case = cases[0]
+
+    return {
+        "serial_number": serial,
+        "repair_count": len(cases),
+        "is_repeat": len(cases) > 1,
+        "first_seen": min(known_timestamps, key=parse_timestamp) if known_timestamps else "",
+        "last_seen": max(known_timestamps, key=parse_timestamp) if known_timestamps else "",
+        "current_status": latest_case["status"],
+        "open_case_count": len(open_cases),
+        "most_replaced_part": parts_breakdown[0]["part"] if parts_breakdown else "None",
+        "parts_breakdown": parts_breakdown,
+        "cases": cases,
+    }
+
 def normalize_csv_row(row: list[str], headers: Optional[list[str]] = None) -> Optional[dict]:
     row = [str(cell).strip() for cell in row]
     if not row or not any(row):
