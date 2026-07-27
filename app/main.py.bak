@@ -1,5 +1,4 @@
 import os
-import sys
 from collections import Counter
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -16,13 +15,6 @@ from fastapi.staticfiles import StaticFiles
 from . import database as db
 from .security import constant_time_equals, create_csrf_token, create_session_token, is_default_secret, read_session_token, secure_cookies_enabled, verify_password
 
-def resource_path(relative_path: str) -> str:
-    """Return a path that works both normally and inside a PyInstaller EXE."""
-    if hasattr(sys, "_MEIPASS"):
-        return str(Path(sys._MEIPASS) / relative_path)
-    return str(Path(relative_path))
-
-
 app = FastAPI(
     title="OpenCase",
     description="Portfolio repair workflow application for work orders, parts, repeat devices, analytics, and role-based access.",
@@ -30,12 +22,12 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
-app.mount("/static", StaticFiles(directory=resource_path("app/static")), name="static")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
-    return FileResponse(resource_path("app/static/favicon.ico"))
+    return FileResponse("app/static/favicon.ico")
 app.add_middleware(SessionMiddleware, secret_key=os.environ.get("LCT_SECRET_KEY", "dev-only-change-this-secret"))
-templates = Jinja2Templates(directory=resource_path("app/templates"))
+templates = Jinja2Templates(directory=str(Path(__file__).resolve().parent / "templates"))
 
 if secure_cookies_enabled():
     app.add_middleware(HTTPSRedirectMiddleware)
@@ -55,30 +47,6 @@ STATUS_COLORS = {"Total":"total","Ordered":"ordered","Pending":"pending","Replac
 DEMO_USERNAME = "demo"
 DEMO_DISPLAY_NAME = "Demo User"
 DEMO_EMAIL = "demo@opencase.local"
-
-
-def local_mode() -> bool:
-    return os.environ.get("LOCAL_MODE", "false").strip().lower() == "true"
-
-
-def ensure_local_admin() -> dict:
-    user = db.get_user_by_username("localadmin")
-    if user:
-        return user
-
-    db.create_user(
-        username="localadmin",
-        display_name="Local Administrator",
-        password=os.urandom(24).hex(),
-        role="admin",
-        email="localadmin@opencase.local",
-    )
-
-    user = db.get_user_by_username("localadmin")
-    if not user:
-        raise HTTPException(status_code=500, detail="Local admin user could not be created.")
-    return user
-
 
 
 
@@ -117,9 +85,6 @@ def cases_url(search: str = "", status: str = "All", part: str = "All", hide_com
 
 
 def current_user(request: Request) -> dict:
-    if local_mode():
-        return ensure_local_admin()
-
     user_id = read_session_token(request.cookies.get("lct_session"))
     user = db.get_user_by_id(user_id) if user_id else None
     if not user:
@@ -128,9 +93,6 @@ def current_user(request: Request) -> dict:
 
 
 def current_user_optional(request: Request) -> dict | None:
-    if local_mode():
-        return ensure_local_admin()
-
     user_id = read_session_token(request.cookies.get("lct_session"))
     return db.get_user_by_id(user_id) if user_id else None
 
@@ -197,9 +159,9 @@ def login_template_context(message: str = "", error: str = "") -> dict:
     return {
         "user": None,
         "error": error,
-        "google_enabled": hasattr(oauth, "google") and not local_mode(),
-        "local_auth_enabled": os.environ.get("LOCAL_AUTH_ENABLED", "false").strip().lower() == "true" and not local_mode(),
-        "demo_enabled": demo_login_enabled() and not local_mode(),
+        "google_enabled": hasattr(oauth, "google"),
+        "local_auth_enabled": os.environ.get("LOCAL_AUTH_ENABLED", "false").strip().lower() == "true",
+        "demo_enabled": demo_login_enabled(),
         "landing_stats": {
             "total": counts.get("Total", 0),
             "open": open_count,
@@ -211,8 +173,6 @@ def login_template_context(message: str = "", error: str = "") -> dict:
 
 @app.get("/login")
 def login_page(request: Request, message: str = ""):
-    if local_mode():
-        return RedirectResponse("/", status_code=303)
     if current_user_optional(request):
         return RedirectResponse("/", status_code=303)
     return template(request, "login.html", login_template_context(message=message))
@@ -275,9 +235,6 @@ def demo_login():
 
 @app.post("/logout")
 def logout(request: Request, csrf_token: str = Form(...)):
-    if local_mode():
-        return RedirectResponse("/", status_code=303)
-
     require_csrf(request, csrf_token)
     redirect = RedirectResponse("/login", status_code=303)
     redirect.delete_cookie("lct_session")
@@ -289,11 +246,7 @@ def dashboard(request: Request, user: dict = Depends(current_user)):
     return template(request, "dashboard.html", {"user": user, "warning_default_secret": is_default_secret(), "counts": db.dashboard_counts(), "repeats": db.repeat_serial_groups(), "oldest_open": db.oldest_open_cases(limit=12), "status_colors": STATUS_COLORS})
 
 
-def sorted_cases(
-    rows: list[dict],
-    sort: str = "work_order",
-    direction: str = "asc",
-) -> list[dict]:
+def sorted_cases(rows: list[dict], sort: str = "work_order", direction: str = "asc") -> list[dict]:
     valid_sorts = {
         "work_order": "work_order",
         "serial_number": "serial_number",
@@ -307,36 +260,15 @@ def sorted_cases(
     sort_key = valid_sorts.get(sort, "work_order")
     reverse = direction == "desc"
 
-    def normalize(value, field: str):
+    def normalize(value):
         if value is None:
-            return (1, "")
-
-        if field == "work_order":
-            try:
-                return (0, int(str(value).strip()))
-            except (ValueError, TypeError):
-                return (1, str(value).lower())
-
+            return ""
         if isinstance(value, bool):
-            return (0, int(value))
+            return int(value)
+        return str(value).lower()
 
-        return (0, str(value).strip().lower())
+    return sorted(rows, key=lambda row: normalize(row.get(sort_key)), reverse=reverse)
 
-    sorted_rows = list(rows)
-
-    sorted_rows.sort(
-        key=lambda row: (
-            normalize(row.get("work_order"), "work_order"),
-            row.get("id", 0),
-        )
-    )
-    
-    sorted_rows.sort(
-        key=lambda row: normalize(row.get(sort_key), sort_key),
-        reverse=reverse,
-    )
-
-    return sorted_rows
 
 def cases_redirect_url(
     sort: str = "work_order",
@@ -347,24 +279,16 @@ def cases_redirect_url(
     hide_complete: bool = True,
     followups_only: bool = False,
 ) -> str:
-    params = {
-        "sort": sort,
-        "direction": direction,
-        "search": search,
-        "status": status,
-        "part": part,
-        "hide_complete": str(hide_complete).lower(),
-        "followups_only": str(followups_only).lower(),
-    }
-
-    return "/cases?" + urlencode(params)
-
-
-def safe_cases_return_url(return_to: str | None) -> str:
-    """Allow redirects only back into the local Cases page."""
-    if return_to and (return_to == "/cases" or return_to.startswith("/cases?")):
-        return return_to
-    return cases_redirect_url(sort="work_order", direction="asc")
+    return (
+        f"/cases?"
+        f"sort={sort}"
+        f"&direction={direction}"
+        f"&search={search}"
+        f"&status={status}"
+        f"&part={part}"
+        f"&hide_complete={str(hide_complete).lower()}"
+        f"&followups_only={str(followups_only).lower()}"
+    )
 
 
 @app.get("/cases")
@@ -394,36 +318,13 @@ def cases(
         followups_only=followups_only,
     )
 
-    counts = db.dashboard_counts()
-    case_analytics = db.analytics(analytics_cases)
-
-    cases_analytics = {
-        "Open": counts.get("Total", 0) - counts.get("Complete", 0),
-        "Replaced": counts.get("Replaced", 0),
-        "Returned": counts.get("Returned", 0),
-        "Follow-ups": counts.get("Follow-ups", 0),
-        "Repeat Serials": counts.get("Repeat Serials", 0),
-        "Top Part": case_analytics.get("Top Part", "None"),
-        "Complete %": case_analytics.get("Complete %", "0%"),
-    }
-
-    current_cases_url = cases_redirect_url(
-        sort=sort,
-        direction=direction,
-        search=search,
-        status=status,
-        part=part,
-        hide_complete=hide_complete,
-        followups_only=followups_only,
-    )
-
     return template(
         request,
         "cases.html",
         {
             "user": user,
             "cases": rows,
-            "analytics": cases_analytics,
+            "analytics": db.analytics(analytics_cases),
             "status_colors": STATUS_COLORS,
             "search": search,
             "status": status,
@@ -432,12 +333,12 @@ def cases(
             "followups_only": followups_only,
             "sort": sort,
             "direction": direction,
-            "current_cases_url": current_cases_url,
             "statuses": ["All"] + db.STATUS_OPTIONS,
             "parts": ["All"] + db.PART_OPTIONS + ["Other"],
             "repeat_serials": set(db.repeat_serial_groups().keys()),
         },
     )
+
 
 @app.get("/cases/new")
 def new_case(request: Request, user: dict = Depends(current_user)):
@@ -625,21 +526,16 @@ def update_status(
     request: Request,
     case_id: int,
     status: str = Form(...),
-    return_to: str = Form("/cases"),
     csrf_token: str = Form(...),
     user: dict = Depends(current_user),
 ):
     require_csrf(request, csrf_token)
 
     if status in db.STATUS_OPTIONS:
-        db.update_status(
-            case_id,
-            status,
-            changed_by=user["display_name"],
-        )
+        db.update_status(case_id, status, changed_by=user["display_name"])
 
     return RedirectResponse(
-        safe_cases_return_url(return_to),
+        cases_redirect_url(sort="work_order", direction="asc"),
         status_code=303,
     )
 

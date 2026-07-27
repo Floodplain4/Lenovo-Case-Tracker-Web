@@ -1,11 +1,19 @@
-.env
-*.env
-*.db
-*.csv
-backups/
+# Virtual environment
+.venv/
+
+# Python
 __pycache__/
 *.pyc
-.venv/
-dist/
+
+# PyInstaller
 build/
+dist/
 *.spec
+
+# Local data
+*.db
+*.csv
+
+# IDE
+.vscode/
+.idea/
