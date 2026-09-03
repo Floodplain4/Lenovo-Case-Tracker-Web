@@ -318,16 +318,31 @@ def build_case_summary(case: dict) -> str:
 def row_to_case(row: sqlite3.Row) -> dict:
     data = dict(row)
     notes = data.get("notes") or ""
+    timestamp = data.get("timestamp") or ""
+    status = data.get("status") or "Ordered"
+    manual_followup = bool(data.get("followup") or 0)
+
+    changed_at = parse_timestamp(timestamp)
+    if changed_at == datetime.max:
+        age_days = 0
+        auto_followup = False
+    else:
+        age_days = max(0, (datetime.now() - changed_at).days)
+        auto_followup = status != "Complete" and age_days >= 3
+
     case = {
         "id": data.get("id"),
         "work_order": data.get("work_order") or "",
         "serial_number": (data.get("serial_number") or "").upper(),
-        "status": data.get("status") or "Ordered",
+        "status": status,
         "notes": notes,
         "parts": parts_display(notes),
         "user_notes": user_notes_display(notes),
-        "timestamp": data.get("timestamp") or "",
-        "followup": bool(data.get("followup") or 0),
+        "timestamp": timestamp,
+        "manual_followup": manual_followup,
+        "auto_followup": auto_followup,
+        "followup": manual_followup or auto_followup,
+        "age_days": age_days,
         "assigned_to": data.get("assigned_to") or "",
     }
     case["summary"] = build_case_summary(case)

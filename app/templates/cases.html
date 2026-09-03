@@ -2,26 +2,190 @@
 {% block content %}
 
 <style>
-  .analytics-title { margin:0 0 12px; }
-  .analytics-grid { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
-  .analytics-card {
-    min-width:108px; padding:12px 14px; text-align:center;
-    background:#0f172a; border:1px solid #334155; border-radius:10px;
+  .cases-header {
+    display:flex; justify-content:space-between; align-items:flex-end;
+    gap:16px; margin-bottom:16px;
   }
-  .analytics-card .value { display:block; font-size:1.05rem; font-weight:800; color:#f8fafc; }
-  .analytics-card .label { display:block; margin-top:4px; color:#f8fafc; }
-  .cases-toolbar {
-    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-    margin-bottom:10px;
+  .cases-header h2 { margin:0 0 5px; }
+  .cases-header p { margin:0; }
+  .cases-header .button { white-space:nowrap; }
+
+  .case-signals {
+    display:grid; grid-template-columns:repeat(7,minmax(0,1fr));
+    gap:8px; margin-bottom:14px;
   }
-  .cases-toolbar input[type="text"], .cases-toolbar input:not([type]), .cases-toolbar select {
-    height:36px; box-sizing:border-box;
+  .signal-card {
+    display:flex; justify-content:space-between; align-items:center; gap:12px;
+    padding:12px 14px; background:#111827; border:1px solid #334155;
+    border-radius:10px; text-decoration:none; color:inherit;
   }
-  .cases-toolbar .search-input { width:188px; }
-  .cases-toolbar .filter-select { width:96px; }
-  .toolbar-actions { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .signal-card:hover { border-color:#60a5fa; background:#172033; }
+  .signal-card span { color:var(--muted); font-size:.78rem; white-space:nowrap; }
+  .signal-card strong { font-size:1.18rem; color:#f8fafc; }
+  .signal-card.followups { border-left:4px solid #f59e0b; }
+  .signal-card.open { border-left:4px solid #3b82f6; }
+  .signal-card.repeats { border-left:4px solid #8b5cf6; }
+  .signal-card.ordered { border-left:4px solid #ffc107; }
+  .signal-card.pending { border-left:4px solid #0d6efd; }
+  .signal-card.replaced { border-left:4px solid #198754; }
+  .signal-card.returned { border-left:4px solid #dc3545; }
+
+  .case-controls {
+    margin-bottom:12px;
+    background:#111827;
+    border:1px solid #293548;
+    border-radius:12px;
+    box-shadow:0 4px 14px rgba(0,0,0,.12);
+    overflow:hidden;
+  }
+  .case-search-row {
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px;
+  }
+  .case-search-wrap {
+    position:relative;
+    flex:1 1 440px;
+    min-width:260px;
+  }
+  .case-search-icon {
+    position:absolute;
+    left:13px;
+    top:50%;
+    transform:translateY(-50%);
+    color:#94a3b8;
+    pointer-events:none;
+    font-size:.95rem;
+  }
+  .case-search-input {
+    width:100%;
+    height:40px;
+    box-sizing:border-box;
+    padding:0 13px 0 38px;
+    border:1px solid #475569;
+    border-radius:8px;
+    background:#0b1220;
+    color:#f8fafc;
+    font-size:.92rem;
+  }
+  .case-search-input:focus {
+    outline:none;
+    border-color:#60a5fa;
+    box-shadow:0 0 0 3px rgba(96,165,250,.13);
+  }
+  .case-search-button {
+    min-height:40px;
+    padding:0 17px;
+    white-space:nowrap;
+  }
+  .filter-toggle {
+    min-height:40px;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:0 13px;
+    border:1px solid #475569;
+    border-radius:8px;
+    background:#172033;
+    color:#e2e8f0;
+    cursor:pointer;
+    font-size:.86rem;
+    white-space:nowrap;
+  }
+  .filter-toggle:hover { border-color:#64748b; background:#1e293b; }
+  .filter-count {
+    min-width:19px;
+    height:19px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:999px;
+    background:#2563eb;
+    color:white;
+    font-size:.7rem;
+    font-weight:800;
+  }
+  .case-view-row {
+    display:flex;
+    align-items:center;
+    gap:4px;
+    padding:0 12px;
+    border-top:1px solid #263244;
+    overflow-x:auto;
+  }
+  .case-view {
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    min-height:39px;
+    padding:0 11px;
+    color:#94a3b8;
+    text-decoration:none;
+    font-size:.82rem;
+    font-weight:600;
+    white-space:nowrap;
+  }
+  .case-view:hover { color:#e2e8f0; }
+  .case-view.active { color:#f8fafc; }
+  .case-view.active::after {
+    content:"";
+    position:absolute;
+    left:9px;
+    right:9px;
+    bottom:0;
+    height:2px;
+    border-radius:2px 2px 0 0;
+    background:#60a5fa;
+  }
+  .case-filter-panel {
+    display:none;
+    padding:12px;
+    border-top:1px solid #263244;
+    background:#0f172a;
+  }
+  .case-filter-panel.open { display:block; }
+  .case-filter-fields {
+    display:flex;
+    align-items:flex-end;
+    gap:12px;
+    flex-wrap:wrap;
+  }
+  .filter-field {
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    min-width:160px;
+  }
+  .filter-field span {
+    color:#94a3b8;
+    font-size:.72rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .filter-field select {
+    height:36px;
+    min-width:160px;
+    border-radius:7px;
+  }
+  .filter-actions {
+    display:flex;
+    gap:7px;
+    align-items:center;
+  }
+  .clear-link {
+    color:#94a3b8;
+    text-decoration:none;
+    font-size:.82rem;
+    padding:8px 4px;
+  }
+  .clear-link:hover { color:#e2e8f0; text-decoration:underline; }
+
   .keyboard-help { margin:8px 0 4px; font-size:.82rem; color:var(--muted); }
   kbd { background:#0b1220; border:1px solid #4b5563; border-bottom-width:2px; border-radius:5px; padding:1px 5px; color:#e5e7eb; }
+  .selection-status { min-height:22px; margin-top:8px; color:#bfdbfe; font-size:.86rem; }
+
   .cases-table { width:100%; border-collapse:separate; border-spacing:0; }
   .cases-table th { text-align:left; font-size:.76rem; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; position:sticky; top:0; z-index:2; }
   .cases-table td { padding:.6rem .7rem; vertical-align:middle; font-size:.9rem; }
@@ -41,138 +205,148 @@
   .status-form select { min-width:112px; height:32px; padding:.2rem .45rem; font-size:.85rem; }
   .serial-cell, .work-order-cell { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace; font-weight:700; white-space:nowrap; }
   .serial-value { display:inline-flex; align-items:center; gap:5px; }
-  .serial-history-link {
-    color: inherit;
-    text-decoration: none;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  .serial-history-link:hover,
-  .serial-history-link:focus-visible {
-    color: #60a5fa;
-    text-decoration: underline;
-  }
+  .serial-history-link { color:inherit; text-decoration:none; font-weight:700; cursor:pointer; }
+  .serial-history-link:hover, .serial-history-link:focus-visible { color:#60a5fa; text-decoration:underline; }
   .serial-copy-button { padding:3px 7px; margin:0; font-size:.72rem; background:#374151; border-color:#6b7280; }
-  .parts-cell, .timestamp-cell { white-space:nowrap; }
+  .parts-cell, .timestamp-cell, .age-cell { white-space:nowrap; }
   .notes-cell { max-width:300px; color:rgba(255,255,255,.86); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .repeat-badge, .followup-badge { display:inline-flex; align-items:center; border-radius:999px; padding:.15rem .45rem; font-size:.68rem; font-weight:700; margin-left:.3rem; color:white; }
-  .repeat-badge { background:#991b1b; }
-  .followup-badge { background:#ea580c; }
+
+  .repeat-badge, .followup-badge, .auto-followup-badge {
+    display:inline-flex; align-items:center; border-radius:999px; padding:.15rem .45rem;
+    font-size:.68rem; font-weight:700; margin-left:.3rem; color:white;
+  }
+  .repeat-badge { background:#7c3aed; }
+  .followup-badge {
+    background:#ea580c;
+    border:1px solid #fb923c;
+    color:#fff7ed;
+  }
+  .auto-followup-badge {
+    background:#b91c1c;
+    border:1px solid #ef4444;
+    color:#fff;
+    gap:.22rem;
+  }
+  .auto-followup-icon {
+    font-size:.78rem;
+    line-height:1;
+  }
+
+  .age-days { color:#cbd5e1; }
+  .age-days.stale { color:#fbbf24; font-weight:700; }
+  .age-days.very-stale { color:#fb7185; font-weight:800; }
+
   .action-row { display:flex; align-items:center; gap:.3rem; flex-wrap:nowrap; white-space:nowrap; }
   .summary-copy { position:absolute; left:-9999px; width:1px; height:1px; }
-  .selection-status { min-height:22px; margin-top:10px; color:#bfdbfe; font-size:.86rem; }
   .copy-toast { position:fixed; right:22px; bottom:22px; z-index:1000; background:#111827; color:#f9fafb; border:1px solid #60a5fa; border-radius:9px; padding:10px 14px; box-shadow:0 10px 30px rgba(0,0,0,.35); opacity:0; transform:translateY(8px); pointer-events:none; transition:.16s ease; }
   .copy-toast.show { opacity:1; transform:translateY(0); }
 
-.analytics-card {
-    min-width: 138px;
-    min-height: 74px;
-    padding: 12px 16px;
-    background: #111827;
-    border: 1px solid #334155;
-    border-left-width: 4px;
-    border-radius: 10px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 5px;
-}
-
-.analytics-card strong {
-    font-size: 1.25rem;
-    line-height: 1;
-}
-
-.analytics-card span {
-    font-size: 1rem;
-}
-
-.analytics-card.accent-blue {
-    border-left-color: #3b82f6;
-}
-
-.analytics-card.accent-gray {
-    border-left-color: #9ca3af;
-}
-
-.analytics-card.accent-light-blue {
-    border-left-color: #93c5fd;
-}
-
-.analytics-card.accent-yellow {
-    border-left-color: #facc15;
-}
-
-.analytics-card.accent-green {
-    border-left-color: #34d399;
-}
-.analytics-card.accent-replaced {
-    border-left-color: #10b981;
-}
-
-.analytics-card.accent-returned {
-    border-left-color: #ef4444;
-}
-.analytics-card.accent-follow {
-    border-left-color: #f59e0b;
-}
-.analytics-card.accent-repeat {
-    border-left-color: #8b5cf6;
-}
-
+  @media (max-width:1200px) {
+    .case-signals { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  }
   @media (max-width:1000px) {
     .notes-column, .timestamp-column { display:none; }
+  }
+  @media (max-width:720px) {
+    .case-signals { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .cases-header { align-items:flex-start; flex-direction:column; }
+    .case-search-row { align-items:stretch; }
+    .case-search-wrap { flex-basis:100%; }
+    .case-search-button, .filter-toggle { flex:1; justify-content:center; }
   }
 </style>
 
 {% set return_to = request.url.path ~ ('?' ~ request.url.query if request.url.query else '') %}
 
-<h2 class="analytics-title">Analytics</h2>
-<div class="analytics-grid">
-    {% for label, value in analytics.items() %}
-
-        {% if label == 'Open' %}
-          {% set accent_class = 'accent-blue' %}
-        {% elif label == 'Replaced' %}
-          {% set accent_class = 'accent-replaced' %}
-        {% elif label == 'Returned' %}
-          {% set accent_class = 'accent-returned' %}
-        {% elif label == 'Follow-ups' %}
-          {% set accent_class = 'accent-follow' %}
-        {% elif label == 'Repeat Serials' %}
-          {% set accent_class = 'accent-repeat' %}
-        {% elif label == 'Top Part' %}
-          {% set accent_class = 'accent-green' %}
-        {% elif label == 'Complete %' %}
-          {% set accent_class = 'accent-gray' %}
-        {% endif %}
-
-        <div class="analytics-card {{ accent_class }}">
-            <strong>{{ value }}</strong>
-            <span>{{ label }}</span>
-        </div>
-
-    {% endfor %}
+<div class="cases-header">
+  <div>
+    <h2>Cases</h2>
+    <p class="muted">Search and manage repair work. Cases that go 3 days without an update are automatically flagged for follow-up.</p>
+  </div>
+  <a class="button" id="addCaseButton" href="/cases/new">+ Add Case</a>
 </div>
 
-<form method="get" action="/cases" class="cases-toolbar">
-  <input class="search-input" id="caseSearch" name="search" placeholder="Search" value="{{ search }}" autocomplete="off">
-  <select class="filter-select" id="statusFilter" name="status" aria-label="Status">
-    {% for option in statuses %}<option value="{{ option }}" {% if option == status %}selected{% endif %}>{{ option }}</option>{% endfor %}
-  </select>
-  <select class="filter-select" id="partFilter" name="part" aria-label="Part">
-    {% for option in parts %}<option value="{{ option }}" {% if option == part %}selected{% endif %}>{{ option }}</option>{% endfor %}
-  </select>
-  <input type="hidden" name="sort" value="{{ sort }}">
-  <input type="hidden" name="direction" value="{{ direction }}">
-  <input type="hidden" name="hide_complete" value="{{ 'true' if hide_complete else 'false' }}">
-  <input type="hidden" name="followups_only" value="{{ 'true' if followups_only else 'false' }}">
-  <button type="submit">Apply Filter</button>
-  <a class="button secondary" href="/cases?sort={{ sort }}&direction={{ direction }}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'false' if hide_complete else 'true' }}&followups_only={{ 'true' if followups_only else 'false' }}">{{ 'Show Complete Entries' if hide_complete else 'Hide Complete Entries' }}</a>
-  <a class="button secondary" href="/cases?sort={{ sort }}&direction={{ direction }}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'true' if hide_complete else 'false' }}&followups_only={{ 'false' if followups_only else 'true' }}">{{ 'Show All Cases' if followups_only else 'Follow-ups Only' }}</a>
-  <a class="button secondary" href="/cases">Clear Filter</a>
-  <a class="button" id="addCaseButton" href="/cases/new">Add Case</a>
+<div class="case-signals">
+  <a class="signal-card open" href="/cases?hide_complete=true">
+    <span>Open</span>
+    <strong>{{ analytics.get('Open', 0) }}</strong>
+  </a>
+  <a class="signal-card ordered" href="/cases?hide_complete=true&status=Ordered">
+    <span>Ordered</span>
+    <strong>{{ analytics.get('Ordered', 0) }}</strong>
+  </a>
+  <a class="signal-card pending" href="/cases?hide_complete=true&status=Pending">
+    <span>Pending</span>
+    <strong>{{ analytics.get('Pending', 0) }}</strong>
+  </a>
+  <a class="signal-card replaced" href="/cases?hide_complete=true&status=Replaced">
+    <span>Replaced</span>
+    <strong>{{ analytics.get('Replaced', 0) }}</strong>
+  </a>
+  <a class="signal-card returned" href="/cases?hide_complete=true&status=Returned">
+    <span>Returned</span>
+    <strong>{{ analytics.get('Returned', 0) }}</strong>
+  </a>
+  <a class="signal-card followups" href="/cases?hide_complete=true&followups_only=true">
+    <span>Follow-up</span>
+    <strong>{{ analytics.get('Follow-ups', 0) }}</strong>
+  </a>
+  <a class="signal-card repeats" href="/repeats">
+    <span>Repeats</span>
+    <strong>{{ analytics.get('Repeat Serials', 0) }}</strong>
+  </a>
+</div>
+
+<form method="get" action="/cases" class="case-controls">
+  {% set advanced_filter_count = (1 if status not in ['All','Ordered','Pending'] else 0) + (1 if part != 'All' else 0) %}
+  <div class="case-search-row">
+    <div class="case-search-wrap">
+      <span class="case-search-icon" aria-hidden="true">⌕</span>
+      <input class="case-search-input" id="caseSearch" name="search"
+             placeholder="Search work order, serial, part, or notes"
+             value="{{ search }}" autocomplete="off">
+    </div>
+
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="direction" value="{{ direction }}">
+    <input type="hidden" name="hide_complete" value="{{ 'true' if hide_complete else 'false' }}">
+    <input type="hidden" name="followups_only" value="{{ 'true' if followups_only else 'false' }}">
+
+    <button class="case-search-button" type="submit">Search</button>
+    <button class="filter-toggle" id="filterToggle" type="button" aria-expanded="{{ 'true' if advanced_filter_count else 'false' }}" aria-controls="caseFilterPanel">
+      Filters
+      {% if advanced_filter_count %}<span class="filter-count">{{ advanced_filter_count }}</span>{% endif %}
+    </button>
+  </div>
+
+  <div class="case-view-row" aria-label="Case views">
+    <a class="case-view {% if hide_complete and not followups_only and status == 'All' %}active{% endif %}" href="/cases?hide_complete=true">Open</a>
+    <a class="case-view {% if followups_only %}active{% endif %}" href="/cases?hide_complete=true&followups_only=true">Follow-ups</a>
+    <a class="case-view {% if status == 'Ordered' %}active{% endif %}" href="/cases?hide_complete=true&status=Ordered">Ordered</a>
+    <a class="case-view {% if status == 'Pending' %}active{% endif %}" href="/cases?hide_complete=true&status=Pending">Pending</a>
+    <a class="case-view {% if not hide_complete and status == 'All' and not followups_only %}active{% endif %}" href="/cases?hide_complete=false">All Cases</a>
+  </div>
+
+  <div class="case-filter-panel {% if advanced_filter_count %}open{% endif %}" id="caseFilterPanel">
+    <div class="case-filter-fields">
+      <label class="filter-field">
+        <span>Status</span>
+        <select id="statusFilter" name="status" aria-label="Status">
+          {% for option in statuses %}<option value="{{ option }}" {% if option == status %}selected{% endif %}>{{ option }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="filter-field">
+        <span>Part</span>
+        <select id="partFilter" name="part" aria-label="Part">
+          {% for option in parts %}<option value="{{ option }}" {% if option == part %}selected{% endif %}>{{ option }}</option>{% endfor %}
+        </select>
+      </label>
+      <div class="filter-actions">
+        <button type="submit">Apply</button>
+        <a class="clear-link" href="/cases">Reset filters</a>
+      </div>
+    </div>
+  </div>
 </form>
 
 <p class="keyboard-help"><kbd>↑</kbd>/<kbd>↓</kbd> select · <kbd>Ctrl</kbd>+<kbd>C</kbd> copy serial · <kbd>Enter</kbd> edit · <kbd>F</kbd> follow-up · <kbd>/</kbd> search · <kbd>N</kbd> new case</p>
@@ -186,8 +360,9 @@
         <th><a href="/cases?sort=serial_number&direction={% if sort == 'serial_number' and direction == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'true' if hide_complete else 'false' }}&followups_only={{ 'true' if followups_only else 'false' }}">Serial</a></th>
         <th><a href="/cases?sort=status&direction={% if sort == 'status' and direction == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'true' if hide_complete else 'false' }}&followups_only={{ 'true' if followups_only else 'false' }}">Status</a></th>
         <th><a href="/cases?sort=parts&direction={% if sort == 'parts' and direction == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'true' if hide_complete else 'false' }}&followups_only={{ 'true' if followups_only else 'false' }}">Parts</a></th>
+        <th class="age-column">Age</th>
         <th class="notes-column"><a href="/cases?sort=notes&direction={% if sort == 'notes' and direction == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'true' if hide_complete else 'false' }}&followups_only={{ 'true' if followups_only else 'false' }}">Notes</a></th>
-        <th class="timestamp-column"><a href="/cases?sort=timestamp&direction={% if sort == 'timestamp' and direction == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'true' if hide_complete else 'false' }}&followups_only={{ 'true' if followups_only else 'false' }}">Timestamp</a></th>
+        <th class="timestamp-column"><a href="/cases?sort=timestamp&direction={% if sort == 'timestamp' and direction == 'asc' %}desc{% else %}asc{% endif %}&search={{ search|urlencode }}&status={{ status|urlencode }}&part={{ part|urlencode }}&hide_complete={{ 'true' if hide_complete else 'false' }}&followups_only={{ 'true' if followups_only else 'false' }}">Last Updated</a></th>
         <th>Actions</th>
       </tr></thead>
       <tbody>
@@ -202,27 +377,13 @@
           <td class="work-order-cell">{{ case.work_order }}</td>
           <td class="serial-cell">
             <span class="serial-value">
-              <a
-                class="serial-history-link"
-                href="/history?serial={{ case.serial_number|urlencode }}"
-                title="View history for {{ case.serial_number }}">
-                {{ case.serial_number }}
-              </a>
-
-              <button
-                class="serial-copy-button"
-                type="button"
-                data-copy-serial="{{ case.serial_number }}"
-                title="Copy serial number">
-                Copy
-              </button>
+              <a class="serial-history-link" href="/history?serial={{ case.serial_number|urlencode }}" title="View history for {{ case.serial_number }}">{{ case.serial_number }}</a>
+              <button class="serial-copy-button" type="button" data-copy-serial="{{ case.serial_number }}" title="Copy serial number">Copy</button>
             </span>
-
-            {% if case.serial_number in repeat_serials %}
-              <span class="repeat-badge">Repeat</span>
-            {% endif %}
-
-            {% if case.followup %}
+            {% if case.serial_number in repeat_serials %}<span class="repeat-badge">Repeat</span>{% endif %}
+            {% if case.auto_followup %}
+              <span class="auto-followup-badge" title="Automatically flagged because this case has not been updated in 3 days"><span class="auto-followup-icon" aria-hidden="true">⚠</span> Follow-up</span>
+            {% elif case.manual_followup %}
               <span class="followup-badge">Follow-up</span>
             {% endif %}
           </td>
@@ -236,16 +397,31 @@
             </form>
           </td>
           <td class="parts-cell">{{ case.parts or '—' }}</td>
+          <td class="age-cell">
+            {% if case.status == 'Complete' %}
+              <span class="muted">—</span>
+            {% elif case.age_days >= 7 %}
+              <span class="age-days very-stale">{{ case.age_days }}d</span>
+            {% elif case.age_days >= 3 %}
+              <span class="age-days stale">{{ case.age_days }}d</span>
+            {% else %}
+              <span class="age-days">{{ case.age_days }}d</span>
+            {% endif %}
+          </td>
           <td class="notes-cell notes-column" title="{{ case.user_notes }}">{{ case.user_notes[:55] }}{% if case.user_notes|length > 55 %}…{% endif %}</td>
           <td class="timestamp-cell timestamp-column">{{ case.timestamp }}</td>
           <td>
             <div class="action-row">
-              <form class="followup-form" method="post" action="/cases/{{ case.id }}/followup">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="return_to" value="{{ return_to }}">
-                <input type="hidden" name="followup" value="{{ 'false' if case.followup else 'true' }}">
-                <button class="small-button secondary" type="submit">{{ 'Clear follow-up' if case.followup else 'Follow-up' }}</button>
-              </form>
+              {% if not case.auto_followup %}
+                <form class="followup-form" method="post" action="/cases/{{ case.id }}/followup">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <input type="hidden" name="return_to" value="{{ return_to }}">
+                  <input type="hidden" name="followup" value="{{ 'false' if case.manual_followup else 'true' }}">
+                  <button class="small-button secondary" type="submit">{{ 'Clear follow-up' if case.manual_followup else 'Follow-up' }}</button>
+                </form>
+              {% else %}
+                <span class="auto-followup-badge" title="Update the case to reset the 3-day timer"><span class="auto-followup-icon" aria-hidden="true">⚠</span> Auto follow-up</span>
+              {% endif %}
               <a class="button small-button" href="/cases/{{ case.id }}/edit">Edit</a>
               <form method="post" action="/cases/{{ case.id }}/delete" onsubmit="return confirm('Delete this case?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -258,7 +434,7 @@
           </td>
         </tr>
       {% else %}
-        <tr><td colspan="7" class="muted">No matching cases found.</td></tr>
+        <tr><td colspan="8" class="muted">No matching cases found. Try clearing the filters or <a href="/cases/new">add a new case</a>.</td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -267,6 +443,15 @@
 <div id="copyToast" class="copy-toast" role="status" aria-live="polite"></div>
 
 <script>
+const filterToggle = document.getElementById('filterToggle');
+const filterPanel = document.getElementById('caseFilterPanel');
+if (filterToggle && filterPanel) {
+  filterToggle.addEventListener('click', () => {
+    const isOpen = filterPanel.classList.toggle('open');
+    filterToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  });
+}
+
 (() => {
   const rows = Array.from(document.querySelectorAll('#casesTable tbody tr.case-row'));
   const status = document.getElementById('selectionStatus');

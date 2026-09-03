@@ -1,31 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-    .case-action-cell {
-        white-space: nowrap;
+    .dashboard-hero {
+        padding: 24px;
     }
 
-    .dashboard-table td {
-        vertical-align: middle;
+    .dashboard-hero h2 {
+        margin-bottom: 8px;
     }
 
-    .case-note-preview {
-        max-width: 360px;
-        color: rgba(255, 255, 255, 0.84);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .dashboard-hero p {
+        max-width: 760px;
+        margin-bottom: 20px;
+    }
+
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .quick-action {
+        display: block;
+        padding: 18px;
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.72);
+        color: inherit;
+        text-decoration: none;
+        transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .quick-action:hover {
+        transform: translateY(-2px);
+        border-color: rgba(96, 165, 250, 0.55);
+        background: rgba(30, 41, 59, 0.9);
+    }
+
+    .quick-action strong {
+        display: block;
+        color: #f8fafc;
+        font-size: 1.05rem;
+        margin-bottom: 5px;
+    }
+
+    .quick-action span {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        line-height: 1.4;
     }
 
     .dashboard-chart-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+        grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
         gap: 16px;
         align-items: stretch;
     }
 
     .status-chart-card,
-    .aging-chart-card {
+    .attention-card {
         min-height: 260px;
     }
 
@@ -59,13 +92,13 @@
         min-width: 3px;
     }
 
-    .aging-list {
+    .attention-list {
         display: grid;
         gap: 10px;
         margin-top: 14px;
     }
 
-    .aging-item {
+    .attention-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -73,102 +106,139 @@
         background: rgba(15, 23, 42, 0.72);
         border: 1px solid rgba(148, 163, 184, 0.14);
         border-radius: 12px;
-        padding: 12px;
+        padding: 13px;
+        color: inherit;
+        text-decoration: none;
     }
 
-    .aging-item strong {
-        font-size: 1.15rem;
+    .attention-item:hover {
+        border-color: rgba(96, 165, 250, 0.45);
+        background: rgba(30, 41, 59, 0.88);
     }
+
+    .attention-label strong {
+        display: block;
+        color: #e2e8f0;
+        font-size: 0.95rem;
+        margin-bottom: 2px;
+    }
+
+    .attention-label span {
+        color: #94a3b8;
+        font-size: 0.82rem;
+    }
+
+    .attention-count {
+        font-size: 1.25rem;
+        color: #f8fafc;
+    }
+
+    .case-action-cell {
+        white-space: nowrap;
+    }
+
+    .dashboard-table td {
+        vertical-align: middle;
+    }
+
+    .case-note-preview {
+        max-width: 360px;
+        color: rgba(255, 255, 255, 0.84);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .oldest-case-row td:first-child {
+        border-left: 4px solid transparent;
+    }
+
+    .oldest-case-row.status-ordered td:first-child { border-left-color: #3b82f6; }
+    .oldest-case-row.status-pending td:first-child { border-left-color: #fbbf24; }
+    .oldest-case-row.status-replaced td:first-child { border-left-color: #10b981; }
+    .oldest-case-row.status-returned td:first-child { border-left-color: #ef4444; }
+    .oldest-case-row.status-complete td:first-child { border-left-color: #94a3b8; }
+
+    .oldest-case-row.status-ordered td:nth-child(3) { color: #3b82f6; font-weight: 600; }
+    .oldest-case-row.status-pending td:nth-child(3) { color: #fbbf24; font-weight: 600; }
+    .oldest-case-row.status-replaced td:nth-child(3) { color: #34d399; font-weight: 600; }
+    .oldest-case-row.status-returned td:nth-child(3) { color: #f87171; font-weight: 600; }
+    .oldest-case-row.status-complete td:nth-child(3) { color: #94a3b8; font-weight: 600; }
 
     @media (max-width: 950px) {
-        .dashboard-chart-grid {
+        .dashboard-chart-grid,
+        .quick-actions {
             grid-template-columns: 1fr;
         }
+
         .chart-row {
             grid-template-columns: 88px minmax(0, 1fr) 34px;
         }
     }
-
-.oldest-case-row td:first-child {
-    border-left: 4px solid transparent;
-}
-
-.oldest-case-row.status-ordered td:first-child {
-    border-left-color: #3b82f6;
-}
-
-.oldest-case-row.status-pending td:first-child {
-    border-left-color: #fbbf24;
-}
-
-.oldest-case-row.status-replaced td:first-child {
-    border-left-color: #10b981;
-}
-
-.oldest-case-row.status-returned td:first-child {
-    border-left-color: #ef4444;
-}
-
-.oldest-case-row.status-complete td:first-child {
-    border-left-color: #94a3b8;
-}
-
-.oldest-case-row.status-ordered td:nth-child(3) {
-    color: #3b82f6;
-    font-weight: 600;
-}
-
-.oldest-case-row.status-pending td:nth-child(3) {
-    color: #fbbf24;
-    font-weight: 600;
-}
-
-.oldest-case-row.status-replaced td:nth-child(3) {
-    color: #34d399;
-    font-weight: 600;
-}
-
-.oldest-case-row.status-returned td:nth-child(3) {
-    color: #f87171;
-    font-weight: 600;
-}
-
-.oldest-case-row.status-complete td:nth-child(3) {
-    color: #94a3b8;
-    font-weight: 600;
-}    
 </style>
 
-{% if warning_default_secret and not user.username == "localadmin" %}<div class="warning">Development secret key is still in use. Set LCT_SECRET_KEY before deployment.</div>{% endif %}
+{% if warning_default_secret and not user.username == "localadmin" %}
+<div class="warning">Development secret key is still in use. Set LCT_SECRET_KEY before deployment.</div>
+{% endif %}
 
-<div class="dashboard-grid">
-    <div class="card">
-        <h2>Dashboard</h2>
-        <div class="stats">
-            {% for label, value in counts.items() %}
-            <div class="stat {{ status_colors.get(label, '') }}">
-                <strong>{{ value }}</strong>
-                <span>{{ label }}</span>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
+<div class="card dashboard-hero">
+    <h2>Repair Dashboard</h2>
+    <p class="muted">Track active repairs, find a device's repair history, and quickly see what needs your attention.</p>
 
-    <div class="card">
-        <h2>Repeat Serial Numbers</h2>
-        {% if repeats %}
-        <p><strong>{{ repeats|length }}</strong> serial number(s) appear more than once.</p>
-        <a class="button" href="/repeats">Review Repeat Serials</a>
-        {% else %}
-        <p class="muted">No repeat serials found.</p>
-        {% endif %}
+    <div class="quick-actions">
+        <a class="quick-action" href="/cases/new">
+            <strong>+ Add Repair Case</strong>
+            <span>Start tracking a new repair or paste in Lenovo case information.</span>
+        </a>
+
+        <a class="quick-action" href="/history">
+            <strong>Find Device History</strong>
+            <span>Look up a serial number to review previous repair cases.</span>
+        </a>
+
+        <a class="quick-action" href="/cases">
+            <strong>View Active Cases</strong>
+            <span>Search, filter, update, and follow up on your current repair work.</span>
+        </a>
     </div>
 </div>
 
 <div class="dashboard-chart-grid">
+    <div class="card attention-card">
+        <h2>Needs Attention</h2>
+        <p class="muted">Jump directly to repair work that may need another look.</p>
+
+        <div class="attention-list">
+            <a class="attention-item" href="/cases?followups_only=true">
+                <span class="attention-label">
+                    <strong>Follow-ups</strong>
+                    <span>Cases you've flagged to revisit</span>
+                </span>
+                <strong class="attention-count">{{ counts.get('Follow-ups', 0) }}</strong>
+            </a>
+
+            <a class="attention-item" href="/repeats">
+                <span class="attention-label">
+                    <strong>Repeat Devices</strong>
+                    <span>Serial numbers with multiple repair records</span>
+                </span>
+                <strong class="attention-count">{{ counts.get('Repeat Serials', 0) }}</strong>
+            </a>
+
+            <a class="attention-item" href="/cases">
+                <span class="attention-label">
+                    <strong>Open Cases</strong>
+                    <span>Repairs that are still in progress</span>
+                </span>
+                <strong class="attention-count">{{ counts.get('Total', 0) - counts.get('Complete', 0) }}</strong>
+            </a>
+        </div>
+    </div>
+
     <div class="card status-chart-card">
-        <h2>Status Breakdown</h2>
-        <p class="muted">Live case counts rendered from the database.</p>
+        <h2>Case Status</h2>
+        <p class="muted">See where your current repair cases stand.</p>
+
         <div class="chart-bars">
             {% set total_cases = counts.get('Total', 0) %}
             {% for label in ['Ordered', 'Pending', 'Replaced', 'Returned', 'Complete'] %}
@@ -176,27 +246,20 @@
                 {% set width = ((value / total_cases) * 100) if total_cases else 0 %}
                 <div class="chart-row">
                     <span>{{ label }}</span>
-                    <div class="chart-track"><div class="chart-fill" style="width: {{ width }}%;"></div></div>
+                    <div class="chart-track">
+                        <div class="chart-fill" style="width: {{ width }}%;"></div>
+                    </div>
                     <strong>{{ value }}</strong>
                 </div>
             {% endfor %}
-        </div>
-    </div>
-
-    <div class="card aging-chart-card">
-        <h2>Operational Signals</h2>
-        <p class="muted">Quick indicators for follow-up work and recurring devices.</p>
-        <div class="aging-list">
-            <div class="aging-item"><span>Follow-up flags</span><strong>{{ counts.get('Follow-ups', 0) }}</strong></div>
-            <div class="aging-item"><span>Repeat serial groups</span><strong>{{ counts.get('Repeat Serials', 0) }}</strong></div>
-            <div class="aging-item"><span>Open cases</span><strong>{{ counts.get('Total', 0) - counts.get('Complete', 0) }}</strong></div>
         </div>
     </div>
 </div>
 
 <div class="card">
     <h2>Oldest Open Cases</h2>
-    <p class="muted">Open work ordered by age, with a compact copy action for support handoffs.</p>
+    <p class="muted">Cases that have been open the longest. Check these for stalled repairs or needed follow-up.</p>
+
     <div class="scroll-window">
         <table id="oldestOpenTable" class="dashboard-table">
             <thead>
@@ -225,7 +288,11 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7" class="muted">No open cases found.</td></tr>
+                <tr>
+                    <td colspan="7" class="muted">
+                        No open cases found. <a href="/cases/new">Add your first repair case.</a>
+                    </td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>

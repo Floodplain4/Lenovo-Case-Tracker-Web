@@ -389,22 +389,16 @@ def cases(
 
     rows = sorted_cases(rows, sort=sort, direction=direction)
 
-    analytics_cases = db.list_cases(
-        hide_complete=hide_complete,
-        followups_only=followups_only,
-    )
-
     counts = db.dashboard_counts()
-    case_analytics = db.analytics(analytics_cases)
 
     cases_analytics = {
         "Open": counts.get("Total", 0) - counts.get("Complete", 0),
+        "Ordered": counts.get("Ordered", 0),
+        "Pending": counts.get("Pending", 0),
         "Replaced": counts.get("Replaced", 0),
         "Returned": counts.get("Returned", 0),
         "Follow-ups": counts.get("Follow-ups", 0),
         "Repeat Serials": counts.get("Repeat Serials", 0),
-        "Top Part": case_analytics.get("Top Part", "None"),
-        "Complete %": case_analytics.get("Complete %", "0%"),
     }
 
     current_cases_url = cases_redirect_url(
