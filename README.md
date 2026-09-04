@@ -4,7 +4,7 @@ A FastAPI-based web application built for tracking laptop repair cases, repeat h
 
 This project started as a desktop Python utility used for managing daily repair workflows and eventually evolved into a database-backed web application with authentication, analytics, and multi-user support.
 
-[![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.14-blue?logo=python)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Framework-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![SQLite](https://img.shields.io/badge/Database-SQLite-07405E?logo=sqlite)](https://www.sqlite.org/)
 [![Render](https://img.shields.io/badge/Hosted%20on-Render-46E3B7?logo=render)](https://render.com/)
@@ -22,7 +22,7 @@ This project started as a desktop Python utility used for managing daily repair 
 
 ## 🚀 Live Demo
 
-👉 https://lenovo-case-tracker-web.onrender.com/
+👉 https://opencase.info/
 
 ---
 
